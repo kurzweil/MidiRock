@@ -2,9 +2,9 @@ from scapy.all import rdpcap
 import struct
 
 # Read packets from a pcap file
-#packets = rdpcap("/Users/kkurzweil/Desktop/Rockband/training")
+packets = rdpcap("/Users/kkurzweil/Desktop/Rockband/training")
 #packets = rdpcap("/Users/kkurzweil/Desktop/Rockband/velocity")
-packets = rdpcap("/Users/kkurzweil/Desktop/Rockband/kick")
+#packets = rdpcap("/Users/kkurzweil/Desktop/Rockband/kick")
 
 print(f"Total packets: {len(packets)}")
 
@@ -82,7 +82,7 @@ def decode_data_packet(packet_bytes):
 
     pid = packet_bytes[0]
     pid_name = USB_PIDS.get(pid, f"UNKNOWN(0x{pid:02X})")
-    data = packet_bytes[1:]  # rest is payload
+    data = packet_bytes[1:-2]  # rest is payload
 
     return {
         "type": "data",

@@ -1,5 +1,73 @@
 #include "Descriptors.h"
 
+const USB_Descriptor_HIDReport_Datatype_t PROGMEM HIDReport[] =
+{
+    HID_RI_USAGE_PAGE(8, 0x01),            /* Generic Desktop */
+    HID_RI_USAGE(8, 0x05),                 /* Game Pad */
+    HID_RI_COLLECTION(8, 0x01),            /* Application */
+        HID_RI_LOGICAL_MINIMUM(8, 0x00),
+        HID_RI_LOGICAL_MAXIMUM(8, 0x01),
+        HID_RI_PHYSICAL_MINIMUM(8, 0x00),
+        HID_RI_PHYSICAL_MAXIMUM(8, 0x01),
+        HID_RI_REPORT_SIZE(8, 0x01),
+        HID_RI_REPORT_COUNT(8, 0x0D),
+        HID_RI_USAGE_PAGE(8, 0x09),        /* Button */
+        HID_RI_USAGE_MINIMUM(8, 0x01),
+        HID_RI_USAGE_MAXIMUM(8, 0x0D),
+        HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+        HID_RI_REPORT_COUNT(8, 0x03),
+        HID_RI_INPUT(8, HID_IOF_CONSTANT),
+        HID_RI_USAGE_PAGE(8, 0x01),        /* Generic Desktop */
+        HID_RI_LOGICAL_MAXIMUM(8, 0x07),
+        HID_RI_PHYSICAL_MAXIMUM(16, 0x013B),
+        HID_RI_REPORT_SIZE(8, 0x04),
+        HID_RI_REPORT_COUNT(8, 0x01),
+        HID_RI_UNIT(8, 0x14),              /* Rotation (Eng. Pos) */
+        HID_RI_USAGE(8, 0x39),             /* Hat switch */
+        HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE | HID_IOF_NULLSTATE),
+        HID_RI_UNIT(8, 0x00),
+        HID_RI_REPORT_COUNT(8, 0x01),
+        HID_RI_INPUT(8, HID_IOF_CONSTANT),
+        HID_RI_LOGICAL_MAXIMUM(16, 0x00FF),
+        HID_RI_PHYSICAL_MAXIMUM(16, 0x00FF),
+        HID_RI_USAGE(8, 0x30),             /* X */
+        HID_RI_USAGE(8, 0x31),             /* Y */
+        HID_RI_USAGE(8, 0x32),             /* Z */
+        HID_RI_USAGE(8, 0x35),             /* Rz */
+        HID_RI_REPORT_SIZE(8, 0x08),
+        HID_RI_REPORT_COUNT(8, 0x04),
+        HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+        HID_RI_USAGE_PAGE(16, 0xFF00),     /* Vendor-defined */
+        HID_RI_USAGE(8, 0x20),
+        HID_RI_USAGE(8, 0x21),
+        HID_RI_USAGE(8, 0x22),
+        HID_RI_USAGE(8, 0x23),
+        HID_RI_USAGE(8, 0x24),
+        HID_RI_USAGE(8, 0x25),
+        HID_RI_USAGE(8, 0x26),
+        HID_RI_USAGE(8, 0x27),
+        HID_RI_USAGE(8, 0x28),
+        HID_RI_USAGE(8, 0x29),
+        HID_RI_USAGE(8, 0x2A),
+        HID_RI_USAGE(8, 0x2B),
+        HID_RI_REPORT_COUNT(8, 0x0C),
+        HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+        HID_RI_USAGE(16, 0x2621),          /* Vendor-defined */
+        HID_RI_REPORT_COUNT(8, 0x08),
+        HID_RI_FEATURE(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+        HID_RI_USAGE(16, 0x2621),          /* Vendor-defined */
+        HID_RI_OUTPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+        HID_RI_LOGICAL_MAXIMUM(16, 0x03FF),
+        HID_RI_PHYSICAL_MAXIMUM(16, 0x03FF),
+        HID_RI_USAGE(8, 0x2C),
+        HID_RI_USAGE(8, 0x2D),
+        HID_RI_USAGE(8, 0x2E),
+        HID_RI_USAGE(8, 0x2F),
+        HID_RI_REPORT_SIZE(8, 0x10),
+        HID_RI_REPORT_COUNT(8, 0x04),
+        HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+    HID_RI_END_COLLECTION(0),
+};
 
 /** Device descriptor structure. This descriptor, located in FLASH memory, describes the overall
  *  device characteristics, including the supported USB version, control endpoint size and the
@@ -19,11 +87,11 @@ const USB_Descriptor_Device_t PROGMEM DeviceDescriptor =
 
 	.VendorID               = 0x1BAD,
 	.ProductID              = 0x3110,
-	.ReleaseNumber          = VERSION_BCD(0,0,1),
+	.ReleaseNumber          = VERSION_BCD(2,0,0),
 
 	.ManufacturerStrIndex   = STRING_ID_Manufacturer,
 	.ProductStrIndex        = STRING_ID_Product,
-	.SerialNumStrIndex      = USE_INTERNAL_SERIAL,
+	.SerialNumStrIndex      = NO_DESCRIPTOR,
 
 	.NumberOfConfigurations = FIXED_NUM_CONFIGURATIONS
 };
@@ -50,41 +118,52 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
 			.MaxPowerConsumption    = USB_CONFIG_POWER_MA(100)
 		},
 
-	.Vendor_Interface =
+	.HID_Interface =
 		{
 			.Header                 = {.Size = sizeof(USB_Descriptor_Interface_t), .Type = DTYPE_Interface},
 
-			.InterfaceNumber        = INTERFACE_ID_Vendor,
-			.AlternateSetting       = 0,
+			.InterfaceNumber        = INTERFACE_ID_HID,
+			.AlternateSetting       = 0x00,
 
 			.TotalEndpoints         = 2,
 
-			.Class                  = 0xFF,
-			.SubClass               = 0xFF,
-			.Protocol               = 0xFF,
+			.Class                  = HID_CSCP_HIDClass,
+			.SubClass               = 0x00,
+			.Protocol               = 0x00,
 
 			.InterfaceStrIndex      = NO_DESCRIPTOR
 		},
 
-	.Vendor_DataInEndpoint =
+	.HID_HID =
 		{
-			.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
+			.Header                 = {.Size = sizeof(USB_HID_Descriptor_HID_t), .Type = HID_DTYPE_HID},
 
-			.EndpointAddress        = VENDOR_IN_EPADDR,
-			.Attributes             = (EP_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
-			.EndpointSize           = VENDOR_IO_EPSIZE,
-			.PollingIntervalMS      = 0x05
+			.HIDSpec                = VERSION_BCD(1,1,1),
+			.CountryCode            = 0x00,
+			.TotalReportDescriptors = 1,
+			.HIDReportType          = HID_DTYPE_Report,
+			.HIDReportLength        = sizeof(HIDReport) 
 		},
 
-	.Vendor_DataOutEndpoint =
+	.HID_ReportINEndpoint =
 		{
 			.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
 
-			.EndpointAddress        = VENDOR_OUT_EPADDR,
-			.Attributes             = (EP_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
-			.EndpointSize           = VENDOR_IO_EPSIZE,
-			.PollingIntervalMS      = 0x05
-		}
+			.EndpointAddress        = HID_IN_EPADDR,
+			.Attributes             = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
+			.EndpointSize           = HID_IO_EPSIZE,
+			.PollingIntervalMS      = 0x0A
+		},
+
+	.HID_ReportOUTEndpoint =
+		{
+			.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
+
+			.EndpointAddress        = HID_OUT_EPADDR,
+			.Attributes             = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
+			.EndpointSize           = HID_IO_EPSIZE,
+			.PollingIntervalMS      = 0x0A
+		},
 };
 
 /** Language descriptor structure. This descriptor, located in FLASH memory, is returned when the host requests
@@ -97,13 +176,13 @@ const USB_Descriptor_String_t PROGMEM LanguageString = USB_STRING_DESCRIPTOR_ARR
  *  form, and is read out upon request by the host when the appropriate string ID is requested, listed in the Device
  *  Descriptor.
  */
-const USB_Descriptor_String_t PROGMEM ManufacturerString = USB_STRING_DESCRIPTOR(L"KRAD");
+const USB_Descriptor_String_t PROGMEM ManufacturerString = USB_STRING_DESCRIPTOR(L"Licenced by Nintendo of America ");
 
 /** Product descriptor string. This is a Unicode string containing the product's details in human readable form,
  *  and is read out upon request by the host when the appropriate string ID is requested, listed in the Device
  *  Descriptor.
  */
-const USB_Descriptor_String_t PROGMEM ProductString = USB_STRING_DESCRIPTOR(L"Rockband Drums");
+const USB_Descriptor_String_t PROGMEM ProductString = USB_STRING_DESCRIPTOR(L"Harmonix Drum Controller for Nintendo Wii");
 
 /** This function is called by the library when in device mode, and must be overridden (see library "USB Descriptors"
  *  documentation) by the application code so that the address and size of a requested descriptor can be given
@@ -147,7 +226,14 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 					Size    = pgm_read_byte(&ProductString.Header.Size);
 					break;
 			}
-
+			break;
+		case HID_DTYPE_HID:
+			Address = &ConfigurationDescriptor.HID_HID;
+			Size    = sizeof(USB_HID_Descriptor_HID_t);
+			break;
+		case HID_DTYPE_Report:
+			Address = &HIDReport;
+			Size    = sizeof(HIDReport);
 			break;
 	}
 

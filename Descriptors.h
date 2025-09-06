@@ -43,13 +43,13 @@
 
 	/* Macros: */
 		/** Endpoint address of the Bulk Vendor device-to-host data IN endpoint. */
-		#define VENDOR_IN_EPADDR               (ENDPOINT_DIR_IN  | 3)
+		#define HID_IN_EPADDR               (ENDPOINT_DIR_IN  | 1)
 
 		/** Endpoint address of the Bulk Vendor host-to-device data OUT endpoint. */
-		#define VENDOR_OUT_EPADDR              (ENDPOINT_DIR_OUT | 4)
+		#define HID_OUT_EPADDR              (ENDPOINT_DIR_OUT | 2)
 
 		/** Size in bytes of the Bulk Vendor data endpoints. */
-		#define VENDOR_IO_EPSIZE               64
+		#define HID_IO_EPSIZE               	64
 
 	/* Type Defines: */
 		/** Type define for the device configuration descriptor structure. This must be defined in the
@@ -61,9 +61,11 @@
 			USB_Descriptor_Configuration_Header_t Config;
 
 			// Vendor Interface
-			USB_Descriptor_Interface_t            Vendor_Interface;
-			USB_Descriptor_Endpoint_t             Vendor_DataInEndpoint;
-			USB_Descriptor_Endpoint_t             Vendor_DataOutEndpoint;
+			USB_Descriptor_Interface_t            HID_Interface;
+			USB_HID_Descriptor_HID_t              HID_HID;
+			USB_Descriptor_Endpoint_t             HID_ReportINEndpoint;
+			USB_Descriptor_Endpoint_t             HID_ReportOUTEndpoint;
+
 		} USB_Descriptor_Configuration_t;
 
 		/** Enum for the device interface descriptor IDs within the device. Each interface descriptor
@@ -72,7 +74,7 @@
 		 */
 		enum InterfaceDescriptors_t
 		{
-			INTERFACE_ID_Vendor = 0, /**< Vendor interface descriptor ID */
+			INTERFACE_ID_HID     = 0,
 		};
 
 		/** Enum for the device string descriptor IDs within the device. Each string descriptor should
