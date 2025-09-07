@@ -2,9 +2,9 @@ from scapy.all import rdpcap
 import struct
 
 # Read packets from a pcap file
-packets = rdpcap("/Users/kkurzweil/Desktop/Rockband/training")
+#packets = rdpcap("/Users/kkurzweil/Desktop/Rockband/training")
 #packets = rdpcap("/Users/kkurzweil/Desktop/Rockband/velocity")
-#packets = rdpcap("/Users/kkurzweil/Desktop/Rockband/kick")
+packets = rdpcap("/Users/kkurzweil/Desktop/test")
 
 print(f"Total packets: {len(packets)}")
 

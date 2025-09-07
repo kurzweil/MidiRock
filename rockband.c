@@ -1,16 +1,111 @@
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include "rockband.h"
 
+#define MIDI_BAUD 31250UL
+
 #define LED_PIN PC7
 
+#define BUFFER_SIZE 8  // Size of the circular buffer
+
 typedef struct {
-    uint16_t buttons;
-    uint8_t  hat;
-    uint8_t  X, Y, Z, Rz;
-    uint8_t  vendor8[12];
+    uint8_t button[2];
+    uint8_t hat;
+    uint8_t X, Y, Z, Rz;
+    uint8_t vendor8[12];
     uint16_t vendor16[4];
 } HIDReport_t;
+
+typedef struct {
+    HIDReport_t buffer[BUFFER_SIZE];
+    uint8_t head;
+    uint8_t tail;
+    bool full;
+} CircularBuffer_t;
+
+void cb_init(CircularBuffer_t *cb) {
+    cb->head = 0;
+    cb->tail = 0;
+    cb->full = false;
+}
+
+// Advance pointer
+static void advance_pointer(CircularBuffer_t *cb) {
+    if (cb->full) {
+        cb->tail = (cb->tail + 1) % BUFFER_SIZE;  // overwrite oldest
+    }
+    cb->head = (cb->head + 1) % BUFFER_SIZE;
+    cb->full = (cb->head == cb->tail);
+}
+
+// Retreat pointer after reading
+static void retreat_pointer(CircularBuffer_t *cb) {
+    cb->full = false;
+    cb->tail = (cb->tail + 1) % BUFFER_SIZE;
+}
+
+bool cb_is_empty(CircularBuffer_t *cb) {
+    return (!cb->full && (cb->head == cb->tail));
+}
+
+// Add an element to the buffer (copy report)
+void cb_push(CircularBuffer_t *cb, const HIDReport_t *item) {
+    memcpy(&cb->buffer[cb->head], item, sizeof(HIDReport_t));
+    advance_pointer(cb);
+}
+
+// Remove an element from the buffer
+bool cb_pop(CircularBuffer_t *cb, HIDReport_t *item) {
+    if (cb_is_empty(cb)) {
+        return false; // nothing to read
+    }
+    memcpy(item, &cb->buffer[cb->tail], sizeof(HIDReport_t));
+    retreat_pointer(cb);
+    return true;
+}
+
+/*
+00 00 08 7F 7F 7F 7F 00 00 00 00 00 00 00 00 00 00 00 00 02 00 02 00 02 00 02 00 Nothing
+20 00 08 7F 7F 7F 7F 00 00 00 00 00 00 00 00 00 00 00 00 02 00 02 00 02 00 02 00 Kick 2 Black
+10 00 08 7F 7F 7F 7F 00 00 00 00 00 00 00 00 00 00 00 00 02 00 02 00 02 00 02 00 Kick 1 Orange
+04 04 08 7F 7F 7F 7F 00 00 00 00 00 FF 00 00 00 00 00 00 02 00 02 00 02 00 02 00 Red / 1
+08 04 08 7F 7F 7F 7F 00 00 00 00 FF 00 00 00 00 00 00 00 02 00 02 00 02 00 02 00 Yellow / 2
+01 04 08 7F 7F 7F 7F 00 00 00 00 00 00 00 FF 00 00 00 00 02 00 02 00 02 00 02 00 Blue / 3
+02 04 08 7F 7F 7F 7F 00 00 00 00 00 00 FF 00 00 00 00 00 02 00 02 00 02 00 02 00 Green / 4
+      XX Hat = 08 centered, clockwise 00 up, 01 up/right, 02 right, etc
+   XX buttons = 08 cymbal, 04 drum hit, 01 minus, 02 plus, 10 home 
+XX buttons = 01 1, 08 2, 02 A, 04 B
+10 04 08 7F 7F 7F 7F 00 00 00 00 00 00 00 00 66 00 00 00 02 00 02 00 02 00 02 00
+08 04 08 7F 7F 7F 7F 00 00 00 00 00 00 00 6B
+02 08 08 7F 7F 7F 7F 00 00 00 00 00 00 FF 00 00 00 00 00 02 00 02 00 02 00 02 00
+*/
+
+uint8_t map_note(uint8_t x) {
+    switch (x) {
+        case 0x2C: return 129; 	//C2
+        case 0x24: return 128; 	//C2
+        case 0x26: return 2;		//D2
+        case 0x30: return 3;		//B2
+        case 0x2D: return 0;		//D3
+        case 0x2B: return 1;		//G2
+        default: return 255;
+    }
+}
+
+HIDReport_t default_report = {
+    .button = {0x00, 0x00},
+    .hat    = 0x08,
+    .X      = 0x7F,
+    .Y      = 0x7F,
+    .Z      = 0x7F,
+    .Rz     = 0x7F,
+    .vendor8 = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+    .vendor16 = {0x0002, 0x0002, 0x0002, 0x0002}
+};
 
 static uint8_t HIDReportBuffer[sizeof(HIDReport_t)];
 
@@ -30,6 +125,13 @@ USB_ClassInfo_HID_Device_t HID_Interface =
 			},
 	};
 
+void uart_send(uint8_t data) {
+    // Wait for empty transmit buffer
+    while (!(UCSR1A & (1 << UDRE1)));
+    // Put data into buffer
+    UDR1 = data;
+}
+
 void uart_init(void) {
     // Calculate UBRR value for the desired baud rate
     uint16_t ubrr = (F_CPU / (16UL * MIDI_BAUD)) - 1;
@@ -39,55 +141,131 @@ void uart_init(void) {
     UBRR1L = (uint8_t)ubrr;
 
     // Enable transmitter and receiver
-    UCSR1B = (1 << TXEN1) | (1 << RXEN1);
+    UCSR1B = (1 << TXEN1) | (1 << RXEN1) | (1<<RXCIE1);
 
     // Set frame format: 8 data bits, no parity, 1 stop bit
     UCSR1C = (1 << UCSZ11) | (1 << UCSZ10);
 }
-     
+
+#define MIDI_SIZE 3  // Max message size we expect
+#define NOTE_OFF       0x80
+#define NOTE_ON        0x90
+#define CONTROL_CHANGE 0xB0
+
+volatile uint8_t midi_buffer[MIDI_SIZE];
+volatile uint8_t midi_index = 0;
+volatile uint8_t midi_byte = 0;       // Last status byte
+volatile uint8_t midi_complete = 0;   // Flag: 1 when message complete
+
+// Helper: get expected MIDI message length from status byte
+static uint8_t midi_message_length(uint8_t status) {
+    if ((status & 0xF0) == 0xC0 || (status & 0xF0) == 0xD0)
+        return 2;  // Program Change & Channel Pressure
+    else
+        return 3;  // Note on/off, Control Change, etc.
+}
+
+ISR(USART1_RX_vect) {
+    uint8_t byte = UDR1;
+
+    if (byte & 0x80) {
+        // Status byte detected: start new message
+        midi_index = 0;
+        midi_buffer[midi_index++] = byte;
+        midi_byte = byte;
+        midi_complete = 0; // reset flag
+    } else {
+        // Data byte
+        if (midi_index < MIDI_SIZE) {
+            midi_buffer[midi_index++] = byte;
+        }
+    }
+
+    // Check if message is complete
+    if (midi_index >= midi_message_length(midi_byte)) {
+        midi_complete = 1;  // flag message ready for main loop
+    }
+}
+
 /** Main program entry point. This routine configures the hardware required by the application, then
  *  enters a loop to run the application tasks in sequence.
  */
 int main(void)
 {
-	uint8_t *PORTn;
+    CircularBuffer_t cb;
+    cb_init(&cb);
     DDRC |= (1 << LED_PIN);
-	DDRD &= ~(1 << PD0);
-	SetupHardware();
+	uart_init();
+	MCUSR &= ~(1 << WDRF);
+	wdt_disable();
+	/* Disable clock division */
+	clock_prescale_set(clock_div_1);
+	/* Hardware Initialization */
+	USB_Init();
 
 	GlobalInterruptEnable();
+
+	HIDReport_t report = {
+		.button = {0x00, 0x00},
+		.hat    = 0x08,
+		.X      = 0x7F,
+		.Y      = 0x7F,
+		.Z      = 0x7F,
+		.Rz     = 0x7F,
+		.vendor8 = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		.vendor16 = {0x0002, 0x0002, 0x0002, 0x0002}
+	};
 
 	for (;;)
 	{
 		USB_USBTask();
 
-		HIDReport_t report;
-		memset(&report, 0, sizeof(report));
-
-		// Fill report based on PD0
-		if (PIND & (1 << PD0)) {
-			report.buttons = 0x0402;
-			report.hat     = 0x08;
-			report.X       = 0x7F;
-			report.Y       = 0x7F;
-			report.Z       = 0x7F;
-			report.Rz      = 0x7F;
-
-			uint8_t vendor8_template[12] = {0,0,0,0,0,0,0x54,0,0,0,0,0};
-			memcpy(report.vendor8, vendor8_template, sizeof(vendor8_template));
-
-			uint16_t vendor16_template[4] = {2,2,2,2};
-			memcpy(report.vendor16, vendor16_template, sizeof(vendor16_template));
-		} else {
-			report.buttons  = 0x0000;
-			report.hat      = 0x08;
-			report.X        = 0x7F;
-			report.Y        = 0x7F;
-			report.Z        = 0x7F;
-			report.Rz       = 0x7F;
-			memset(report.vendor8, 0, sizeof(report.vendor8));
-			for (int i = 0; i < 4; i++) report.vendor16[i] = 2;
-		}
+		if (midi_complete != 0) {
+			uint8_t type = midi_buffer[0] & 0xF0;   // upper nibble = message type
+    		uint8_t channel = midi_buffer[0] & 0x0F;
+            uint8_t note = midi_buffer[1];
+            uint8_t velocity = midi_buffer[2];
+			report.vendor8[9] = midi_buffer[0];
+			report.vendor8[10] = midi_buffer[1];
+			report.vendor8[11] = midi_buffer[2];
+			
+			if (type == NOTE_OFF || (type == NOTE_ON && velocity == 0)) {
+				uint8_t offset = map_note(note);
+				if (offset == 255) {
+					cb_push(&cb, &report);
+				} else if (offset == 129) {
+					report.button[1] &= ~0x02;
+					cb_push(&cb, &report);
+				} else if (offset == 128) {
+					report.button[0] &= ~0x10;
+					cb_push(&cb, &report);
+				} else if (offset >= 0) {
+					PORTC &= ~(1 << LED_PIN);
+					report.button[0] &= ~(1 << offset);
+					report.vendor8[5+offset] = 0;
+					cb_push(&cb, &report);
+				}
+			} else if (type == NOTE_ON) {
+				uint8_t offset = map_note(note);
+				if (offset == 255) {
+					cb_push(&cb, &report);
+				} else if (offset == 129) {
+					report.button[1] |= 0x02;
+					cb_push(&cb, &report);
+				} else if (offset == 128) {
+					report.button[0] |= 0x10;
+					cb_push(&cb, &report);
+				} else if (offset >= 0) {
+					PORTC |= (1 << LED_PIN);
+					report.button[0] |= (1 << offset);
+					report.button[1] = 0x04;
+					report.vendor8[5+offset] = velocity;
+					cb_push(&cb, &report);
+				}
+			}
+            midi_complete = 0;  // Clear flag
+        } 
 
 		// Service OUT endpoint first (if host sent data)
 		Endpoint_SelectEndpoint(HID_OUT_EPADDR);
@@ -100,23 +278,17 @@ int main(void)
 		// Service IN endpoint (host requested data)
 		Endpoint_SelectEndpoint(HID_IN_EPADDR);
 		if (Endpoint_IsINReady()) {
-			Endpoint_Write_Stream_LE((uint8_t *)&report, sizeof(report), NULL);
+			HIDReport_t r;
+			if (cb_pop(&cb, &r)) {
+				Endpoint_Write_Stream_LE((uint8_t *)&r, sizeof(r), NULL);
+			} else {
+				Endpoint_Write_Stream_LE((uint8_t *)&default_report, sizeof(default_report), NULL);
+			}
 			Endpoint_ClearIN(); // this signals the host that data is ready
 		}
 
-		PORTC ^= (1 << LED_PIN);
+		
 	}
-}
-
-/** Configures the board hardware and chip peripherals for the demo's functionality. */
-void SetupHardware(void)
-{
-	MCUSR &= ~(1 << WDRF);
-	wdt_disable();
-	/* Disable clock division */
-	clock_prescale_set(clock_div_1);
-	/* Hardware Initialization */
-	USB_Init();
 }
 
 /** Event handler for the USB_Connect event. This indicates that the device is enumerating via the status LEDs. */
