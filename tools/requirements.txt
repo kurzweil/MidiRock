@@ -1,0 +1,13 @@
+# Python Requirements for Rock Band MIDI-to-USB Testing Tools
+#
+# Install with: pip install -r requirements.txt
+
+# For usb_packet_analyzer.py
+scapy>=2.4.5
+
+# For hid_report_monitor.py
+pyusb>=1.2.1
+hidapi>=0.12.0
+
+# Optional: For Jupyter notebook in docs/
+# jupyter>=1.0.0

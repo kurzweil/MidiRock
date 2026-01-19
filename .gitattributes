@@ -1,0 +1,29 @@
+# Git attributes for Rock Band MIDI-to-USB project
+
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Source code
+*.c text
+*.h text
+*.py text
+
+# Documentation
+*.md text
+*.txt text
+
+# Makefiles
+Makefile text
+*.mk text
+
+# Jupyter notebooks (treat as binary to avoid merge conflicts)
+*.ipynb binary
+
+# Hex files (firmware releases)
+*.hex binary
+*.elf binary
+*.o binary
+
+# Archives
+*.zip binary
+*.tar.gz binary

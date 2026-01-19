@@ -425,6 +425,15 @@ The file `negotiation.txt` contains the captured USB descriptors showing:
 rockband/
 ├── Config/
 │   └── LUFAConfig.h          # LUFA library configuration
+├── docs/                      # Reference documentation
+│   ├── README.md             # Documentation guide
+│   ├── usb_descriptor_reference.txt  # Captured USB descriptors
+│   └── development_notes.ipynb       # Development notebook
+├── tools/                     # Testing and debugging utilities
+│   ├── README.md             # Tools documentation
+│   ├── requirements.txt      # Python dependencies
+│   ├── usb_packet_analyzer.py    # Analyze USB pcap files
+│   └── hid_report_monitor.py     # Monitor live HID reports
 ├── vendor/
 │   └── lufa/                 # LUFA USB framework (submodule)
 ├── rockband.c                # Main firmware source code
@@ -432,20 +441,16 @@ rockband/
 ├── Descriptors.c             # USB descriptors implementation
 ├── Descriptors.h             # USB descriptors header
 ├── Makefile                  # Build configuration
-├── test01.py                 # USB packet analyzer
-├── crc_test.py               # CRC validation
-├── crc_usb.py                # USB CRC implementation
-├── validator.py              # HID report validator
-├── validator2.py             # Alternative validator
-├── drums_emulation.py        # Drum input simulation
-├── negotiation.txt           # USB descriptor capture
-├── notebook.ipynb            # Development notebook
+├── LICENSE                   # MIT License + LUFA attribution
+├── CONTRIBUTING.md           # Contribution guidelines
+├── README.md                 # This file
 └── .gitignore                # Git ignore rules
 ```
 
 ### Key Files
 
-- **`rockband.c`**: Main firmware logic
+#### Core Firmware
+- **`rockband.c`**: Main firmware logic (370 lines)
   - UART MIDI receiver with ISR
   - MIDI message parser
   - Note-to-HID mapper
@@ -455,13 +460,39 @@ rockband/
 - **`Descriptors.c/.h`**: USB device descriptors
   - Device descriptor (Harmonix VID/PID)
   - Configuration descriptor
-  - HID report descriptor (defines report format)
+  - HID report descriptor (defines 28-byte report format)
   - String descriptors
 
-- **`Makefile`**: Build system
+- **`rockband.h`**: Main header file
+  - Function prototypes
+  - USB event handlers
+  - LUFA includes
+
+#### Build System
+- **`Makefile`**: Build configuration
   - AVR-GCC compilation flags
   - LUFA source file inclusion
-  - Programming targets
+  - Flash programming targets
+
+- **`Config/LUFAConfig.h`**: LUFA library settings
+  - USB device mode configuration
+  - Endpoint sizes and options
+
+#### Documentation
+- **`README.md`**: Complete project documentation (this file)
+- **`LICENSE`**: MIT License with LUFA attribution
+- **`CONTRIBUTING.md`**: Developer contribution guide
+- **`docs/README.md`**: Reference documentation guide
+- **`tools/README.md`**: Testing tools documentation
+
+#### Testing Tools (Python)
+- **`tools/usb_packet_analyzer.py`**: Analyze Wireshark USB captures
+- **`tools/hid_report_monitor.py`**: Monitor live HID reports from device
+- **`tools/requirements.txt`**: Python package dependencies
+
+#### Reference Materials
+- **`docs/usb_descriptor_reference.txt`**: Captured USB descriptors from real hardware
+- **`docs/development_notes.ipynb`**: Jupyter notebook with research notes
 
 ## Development Workflow
 

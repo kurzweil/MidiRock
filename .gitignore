@@ -13,3 +13,4 @@
 __pycache__/
 Documentation/
 node_modules/
+.claude/
