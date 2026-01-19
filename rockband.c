@@ -1,3 +1,15 @@
+/*
+ * Rock Band MIDI-to-USB Drum Controller for Nintendo Wii
+ *
+ * Copyright (c) 2024 Rock Band MIDI-to-USB Drum Controller Contributors
+ *
+ * This file is part of the Rock Band MIDI-to-USB project.
+ * Licensed under the MIT License - see LICENSE file for details.
+ *
+ * This project uses the LUFA library, Copyright (C) Dean Camera, 2021.
+ * LUFA is used under its permissive license - see vendor/lufa for details.
+ */
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -83,15 +95,32 @@ XX buttons = 01 1, 08 2, 02 A, 04 B
 02 08 08 7F 7F 7F 7F 00 00 00 00 00 00 FF 00 00 00 00 00 02 00 02 00 02 00 02 00
 */
 
+#define PEDAL  0xA0
+#define KICK   0xA1
+#define CYMBAL 0xB0
+/*
+Hex: 0x2c | Decimal: 44 | MIDI Note: G#2
+Hex: 0x24 | Decimal: 36 | MIDI Note: C2
+Hex: 0x31 | Decimal: 49 | MIDI Note: C#3
+Hex: 0x2e | Decimal: 46 | MIDI Note: A#2
+Hex: 0x33 | Decimal: 51 | MIDI Note: D#3
+Hex: 0x2d | Decimal: 45 | MIDI Note: A2
+Hex: 0x2b | Decimal: 43 | MIDI Note: G2
+Hex: 0x26 | Decimal: 38 | MIDI Note: D2
+Hex: 0x30 | Decimal: 48 | MIDI Note: C3
+*/
 uint8_t map_note(uint8_t x) {
     switch (x) {
-        case 0x2C: return 129; 	//C2
-        case 0x24: return 128; 	//C2
-        case 0x26: return 2;		//D2
-        case 0x30: return 3;		//B2
-        case 0x2D: return 0;		//D3
-        case 0x2B: return 1;		//G2
-        default: return 255;
+        case 0x2C: return PEDAL; 	// Pedal         
+        case 0x24: return KICK; 	// Kick
+		case 0x31: return CYMBAL | 0;	// Blue Cymbal 
+        case 0x2E: return CYMBAL | 3;	// Yellow Cymbal
+		case 0x33: return CYMBAL | 1;	// Green Cymbal
+        case 0x2D: return 0;		// Blue
+        case 0x2B: return 1;		// Green
+	    case 0x26: return 2;		// Red
+        case 0x30: return 3;		// Yellow
+        default: return 0xFF;
     }
 }
 
@@ -232,35 +261,35 @@ int main(void)
 			
 			if (type == NOTE_OFF || (type == NOTE_ON && velocity == 0)) {
 				uint8_t offset = map_note(note);
-				if (offset == 255) {
+				if (offset == 0xFF) {
 					cb_push(&cb, &report);
-				} else if (offset == 129) {
+				} else if (offset == PEDAL) {
 					report.button[1] &= ~0x02;
 					cb_push(&cb, &report);
-				} else if (offset == 128) {
+				} else if (offset == KICK) {
 					report.button[0] &= ~0x10;
 					cb_push(&cb, &report);
 				} else if (offset >= 0) {
 					PORTC &= ~(1 << LED_PIN);
-					report.button[0] &= ~(1 << offset);
-					report.vendor8[5+offset] = 0;
+					report.button[0] &= ~(1 << (offset & ~CYMBAL));
+					report.vendor8[5+(offset & ~CYMBAL)] = 0;
 					cb_push(&cb, &report);
 				}
 			} else if (type == NOTE_ON) {
 				uint8_t offset = map_note(note);
-				if (offset == 255) {
+				if (offset == 0xFF) {
 					cb_push(&cb, &report);
-				} else if (offset == 129) {
+				} else if (offset == PEDAL) {
 					report.button[1] |= 0x02;
 					cb_push(&cb, &report);
-				} else if (offset == 128) {
+				} else if (offset == KICK) {
 					report.button[0] |= 0x10;
 					cb_push(&cb, &report);
 				} else if (offset >= 0) {
 					PORTC |= (1 << LED_PIN);
-					report.button[0] |= (1 << offset);
-					report.button[1] = 0x04;
-					report.vendor8[5+offset] = velocity;
+					report.button[0] |= (1 << (offset & ~CYMBAL));
+					report.button[1] = (offset & CYMBAL) ? 0x08 : 0x04;
+					report.vendor8[5+(offset & ~CYMBAL)] = velocity;
 					cb_push(&cb, &report);
 				}
 			}

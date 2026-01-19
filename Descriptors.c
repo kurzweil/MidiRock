@@ -1,3 +1,17 @@
+/*
+ * Rock Band MIDI-to-USB Drum Controller for Nintendo Wii
+ *
+ * USB Descriptors - Emulates Harmonix Rock Band Drum Controller
+ *
+ * Copyright (c) 2024 Rock Band MIDI-to-USB Drum Controller Contributors
+ *
+ * This file is part of the Rock Band MIDI-to-USB project.
+ * Licensed under the MIT License - see LICENSE file for details.
+ *
+ * This project uses the LUFA library, Copyright (C) Dean Camera, 2021.
+ * LUFA is used under its permissive license - see vendor/lufa for details.
+ */
+
 #include "Descriptors.h"
 
 const USB_Descriptor_HIDReport_Datatype_t PROGMEM HIDReport[] =
